@@ -1,0 +1,239 @@
+<!doctype html>
+
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Product Catalog with Filters</title>
+  <style>
+    :root{--bg:#f6f8fb;--card:#ffffff;--muted:#6b7280;--accent:#0b74de;--glass:rgba(255,255,255,0.6)}
+    *{box-sizing:border-box}
+    body{font-family:Inter,ui-sans-serif,system-ui,Segoe UI,Roboto,'Helvetica Neue',Arial; margin:0; background:var(--bg); color:#111}
+    .app{max-width:1200px;margin:28px auto;padding:20px}
+    header{display:flex;align-items:center;gap:16px;margin-bottom:18px}
+    header h1{font-size:20px;margin:0}
+    .layout{display:grid;grid-template-columns:280px 1fr;gap:20px}
+    .panel{background:var(--card);border-radius:12px;padding:16px;box-shadow:0 6px 18px rgba(15,23,42,0.06)}/* Filters */
+.filters h3{margin:0 0 8px 0;font-size:14px}
+.search{display:flex;gap:8px}
+.search input{flex:1;padding:10px;border-radius:8px;border:1px solid #e6e9ef}
+.group{margin-top:12px}
+.checkbox{display:flex;align-items:center;gap:8px;margin:6px 0}
+.range{display:flex;gap:10px;align-items:center}
+.range input[type=range]{width:100%}
+.btn{background:var(--accent);color:white;padding:8px 12px;border-radius:8px;border:0;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--accent);border:1px solid #dbeafe}
+
+/* Products */
+.toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px}
+.card{background:linear-gradient(180deg, rgba(255,255,255,0.9), rgba(255,255,255,0.95));border-radius:12px;overflow:hidden;border:1px solid #eef2f6}
+.card .media{height:140px;background:#ddd;background-size:cover;background-position:center}
+.card .body{padding:12px}
+.title{font-weight:600;font-size:15px;margin:0 0 6px}
+.meta{font-size:13px;color:var(--muted);margin-bottom:8px}
+.price{font-size:16px;font-weight:700;color:#0b74de}
+.tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.tag{font-size:12px;padding:4px 8px;border-radius:999px;background:#f1f5f9;color:#374151}
+
+/* empty state */
+.empty{padding:40px;text-align:center;color:var(--muted)}
+
+/* responsive */
+@media (max-width:780px){
+  .layout{grid-template-columns:1fr}
+  header{flex-direction:column;align-items:flex-start}
+}
+
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>Product Catalog — Filters demo</h1>
+      <div style="margin-left:auto;color:var(--muted);font-size:13px">Demo: HTML + Vanilla JS</div>
+    </header><div class="layout">
+  <!-- Filters Panel -->
+  <aside class="panel filters" aria-label="filters">
+    <div class="search">
+      <input id="q" placeholder="Search products..." aria-label="Search products" />
+      <button id="reset" class="btn ghost">Reset</button>
+    </div>
+
+    <div class="group">
+      <h3>Category</h3>
+      <div id="categories"></div>
+    </div>
+
+    <div class="group">
+      <h3>Price (₹)</h3>
+      <div class="range">
+        <span id="minLabel">0</span>
+        <input id="price" type="range" min="0" max="5000" value="5000" />
+        <span id="maxLabel">5000</span>
+      </div>
+    </div>
+
+    <div class="group">
+      <h3>Rating</h3>
+      <label class="checkbox"><input type="radio" name="rating" value="0" checked/> Any</label>
+      <label class="checkbox"><input type="radio" name="rating" value="4"/> 4+ stars</label>
+      <label class="checkbox"><input type="radio" name="rating" value="3"/> 3+ stars</label>
+    </div>
+
+    <div class="group">
+      <h3>Sort</h3>
+      <select id="sort">
+        <option value="featured">Featured</option>
+        <option value="price-asc">Price: Low → High</option>
+        <option value="price-desc">Price: High → Low</option>
+        <option value="rating-desc">Rating: High → Low</option>
+      </select>
+    </div>
+
+    <div style="margin-top:12px">
+      <button id="apply" class="btn">Apply Filters</button>
+    </div>
+  </aside>
+
+  <!-- Catalog -->
+  <main>
+    <div class="panel">
+      <div class="toolbar">
+        <div id="resultsInfo">Showing <strong id="count">0</strong> products</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <label style="font-size:13px;color:var(--muted)">View</label>
+        </div>
+      </div>
+
+      <div id="grid" class="grid"></div>
+      <div id="empty" class="empty" style="display:none">No products match your filters.</div>
+    </div>
+  </main>
+</div>
+
+  </div>  <script>
+    // Sample product data (in a real app, fetch from an API)
+    const products = [
+      { id:1, title:'Wireless Headphones', price:2299, category:'Electronics', rating:4.5, img:'https://picsum.photos/id/1005/600/400', tags:['Audio','Wireless'] },
+      { id:2, title:'Classic Leather Wallet', price:799, category:'Accessories', rating:4.1, img:'https://picsum.photos/id/1011/600/400', tags:['Leather'] },
+      { id:3, title:'Running Sneakers', price:2699, category:'Footwear', rating:4.7, img:'https://picsum.photos/id/1025/600/400', tags:['Sport'] },
+      { id:4, title:'Stainless Steel Water Bottle', price:499, category:'Home', rating:4.2, img:'https://picsum.photos/id/103/600/400', tags:['Kitchen','Outdoor'] },
+      { id:5, title:'Smartwatch Series 5', price:4399, category:'Electronics', rating:4.0, img:'https://picsum.photos/id/1040/600/400', tags:['Wearable'] },
+      { id:6, title:'Desk Lamp with USB', price:1299, category:'Home', rating:3.9, img:'https://picsum.photos/id/1050/600/400', tags:['Office'] },
+      { id:7, title:'Yoga Mat', price:599, category:'Sporting', rating:4.3, img:'https://picsum.photos/id/1060/600/400', tags:['Fitness'] },
+      { id:8, title:'Noise-cancelling Earbuds', price:1999, category:'Electronics', rating:4.4, img:'https://picsum.photos/id/1070/600/400', tags:['Audio'] }
+    ];
+
+    // Derive categories from data
+    const categoriesSet = new Set(products.map(p=>p.category));
+
+    // DOM refs
+    const grid = document.getElementById('grid');
+    const countEl = document.getElementById('count');
+    const empty = document.getElementById('empty');
+    const categoriesEl = document.getElementById('categories');
+    const priceEl = document.getElementById('price');
+    const maxLabel = document.getElementById('maxLabel');
+    const qEl = document.getElementById('q');
+    const sortEl = document.getElementById('sort');
+
+    // Populate category checkboxes
+    Array.from(categoriesSet).forEach(cat => {
+      const id = 'cat-' + cat.replace(/\s+/g,'-').toLowerCase();
+      const wrapper = document.createElement('label');
+      wrapper.className = 'checkbox';
+      wrapper.innerHTML = <input type="checkbox" value="${cat}" checked /> ${cat};
+      categoriesEl.appendChild(wrapper);
+    });
+
+    // Helpers
+    function formatPrice(v){ return '₹' + v.toLocaleString('en-IN'); }
+
+    function render(list){
+      grid.innerHTML = '';
+      if(!list.length){ empty.style.display='block'; countEl.textContent = 0; return }
+      empty.style.display='none';
+      countEl.textContent = list.length;
+
+      list.forEach(p => {
+        const card = document.createElement('article');
+        card.className = 'card';
+        card.innerHTML = `
+          <div class="media" style="background-image:url(${p.img})" role="img" aria-label="${p.title}"></div>
+          <div class="body">
+            <h4 class="title">${p.title}</h4>
+            <div class="meta">${p.category} • ${p.rating} ★</div>
+            <div class="price">${formatPrice(p.price)}</div>
+            <div class="tags">${p.tags.map(t=><span class="tag">${t}</span>).join('')}</div>
+          </div>`;
+        grid.appendChild(card);
+      });
+    }
+
+    // Filtering logic
+    function getFilters(){
+      const q = qEl.value.trim().toLowerCase();
+      const selectedCats = Array.from(categoriesEl.querySelectorAll('input:checked')).map(i=>i.value);
+      const maxPrice = Number(priceEl.value);
+      const rating = Number(document.querySelector('input[name=rating]:checked').value);
+      const sort = sortEl.value;
+      return { q, selectedCats, maxPrice, rating, sort };
+    }
+
+    function applyFilters(){
+      const { q, selectedCats, maxPrice, rating, sort } = getFilters();
+      let res = products.filter(p => {
+        if(!selectedCats.includes(p.category)) return false;
+        if(p.price > maxPrice) return false;
+        if(p.rating < rating) return false;
+        if(q){ const hay = (p.title + ' ' + p.tags.join(' ') + ' ' + p.category).toLowerCase(); if(!hay.includes(q)) return false }
+        return true;
+      });
+
+      // Sorting
+      if(sort === 'price-asc') res.sort((a,b)=>a.price-b.price);
+      else if(sort === 'price-desc') res.sort((a,b)=>b.price-a.price);
+      else if(sort === 'rating-desc') res.sort((a,b)=>b.rating-b.rating ? b.rating-a.rating : a.price-b.price);
+      else res = res; // featured: as-is
+
+      render(res);
+    }
+
+    // Initial render
+    (function init(){
+      // set price max dynamically
+      const maxP = Math.max(...products.map(p=>p.price));
+      priceEl.max = Math.ceil(maxP/100)*100;
+      priceEl.value = priceEl.max;
+      maxLabel.textContent = priceEl.value;
+
+      render(products);
+
+      // events
+      document.getElementById('apply').addEventListener('click', applyFilters);
+      document.getElementById('reset').addEventListener('click', ()=>{
+        qEl.value='';
+        Array.from(categoriesEl.querySelectorAll('input')).forEach(i=>i.checked=true);
+        priceEl.value = priceEl.max; maxLabel.textContent = priceEl.value;
+        document.querySelector('input[name=rating][value="0"]').checked = true;
+        sortEl.value='featured';
+        applyFilters();
+      });
+
+      priceEl.addEventListener('input', ()=>{ maxLabel.textContent = priceEl.value });
+
+      // live search with debounce
+      let debounce;
+      qEl.addEventListener('input', ()=>{
+        clearTimeout(debounce);
+        debounce = setTimeout(applyFilters, 300);
+      });
+
+      // changes to categories or rating or sort should auto-apply
+      categoriesEl.addEventListener('change', applyFilters);
+      document.querySelectorAll('input[name=rating]').forEach(r=>r.addEventListener('change', applyFilters));
+      sortEl.addEventListener('change', applyFilters);
+    })();
+  </script></body>
+</html>
